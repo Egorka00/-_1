@@ -1,0 +1,6 @@
+package: "example-package"
+repository: "https://example.com/repo"
+mode: "remote"
+output_file: "graph.png"
+ascii_tree: false
+max_depth: 1
