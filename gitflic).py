@@ -22,7 +22,7 @@ def get_package_dependencies(package_name, repo_url):
 def main():
     # Чтение конфигурации из config.yaml
     config = {}
-    with open("config.yaml", "r") as file:
+    with open("config2.yaml", "r") as file:
         for line in file:
             line = line.strip()
             if not line or line.startswith('#'):
