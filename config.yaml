@@ -1,5 +1,5 @@
 package: "example-package"
-repository: "https://example.com/repo"
+repository: "https://github.com/Egorka00/-_1"
 mode: "remote"
 output_file: "graph.png"
 ascii_tree: false
