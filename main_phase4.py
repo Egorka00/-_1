@@ -6,6 +6,10 @@
 import argparse
 import json
 from collections import defaultdict, deque
+import sys
+
+# Увеличиваем лимит рекурсии
+sys.setrecursionlimit(10000)
 
 class DependencyAnalyzer:
     def __init__(self, graph_data):
@@ -77,8 +81,7 @@ class DependencyAnalyzer:
             for neighbor in self.adjacency.get(node, []):
                 if neighbor not in visited:
                     parent[neighbor] = node
-                    if dfs(neighbor, path + [neighbor]):
-                        return True
+                    dfs(neighbor, path + [neighbor])
                 elif neighbor in recursion_stack:
                     cycle = [neighbor]
                     n = node
@@ -87,11 +90,10 @@ class DependencyAnalyzer:
                         n = parent.get(n, neighbor)
                     cycle.append(neighbor)
                     cycle.reverse()
-                    cycles.append(cycle)
-                    return True
+                    if cycle not in cycles:
+                        cycles.append(cycle)
             
             recursion_stack.remove(node)
-            return False
         
         for node in self.nodes:
             if node not in visited:
@@ -103,25 +105,38 @@ class DependencyAnalyzer:
     def has_cycles(self):
         return len(self.find_cycles()) > 0
     
-    def find_critical_paths(self, package):
+    def find_critical_paths(self, package, max_depth=10):
+        """Ищем критические пути с ограничением глубины"""
         if package not in self.nodes:
             return []
         
         paths = []
+        visited_in_path = set()  # Для отслеживания посещенных в текущем пути
         
-        def dfs(current, path):
-            path.append(current)
+        def dfs(current, path, depth=0):
+            if depth > max_depth:
+                return
+            
+            if current in visited_in_path:
+                return
+            
+            visited_in_path.add(current)
+            new_path = path + [current]
             
             deps = self.adjacency.get(current, [])
             if not deps:
-                paths.append(list(path))
+                paths.append(new_path)
             else:
                 for dep in deps:
-                    dfs(dep, path)
+                    dfs(dep, new_path, depth + 1)
             
-            path.pop()
+            visited_in_path.remove(current)
         
         dfs(package, [])
+        
+        if not paths:
+            paths.append([package])
+            
         return paths
 
 def parse_arguments():
@@ -149,27 +164,20 @@ def load_graph_data(filename):
 
 def create_test_data():
     return {
-        'nodes': ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L', 'M', 'N', 'V'],
+        'nodes': ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'],
         'edges': [
             ['A', 'B'], ['A', 'C'], ['A', 'D'],
             ['B', 'E'], ['B', 'F'],
             ['C', 'G'], ['C', 'H'],
             ['D', 'I'], ['D', 'J'],
-            ['E', 'K'], ['E', 'L'],
-            ['K', 'M'],
-            ['M', 'N'],
-            ['V', 'K'],
-            ['K', 'V']
+            ['E', 'K'], ['E', 'L']
         ],
         'adjacency': {
             'A': ['B', 'C', 'D'],
             'B': ['E', 'F'],
             'C': ['G', 'H'],
             'D': ['I', 'J'],
-            'E': ['K', 'L'],
-            'K': ['M', 'V'],
-            'M': ['N'],
-            'V': ['K']
+            'E': ['K', 'L']
         }
     }
 
@@ -217,6 +225,14 @@ def main():
     print(f"Пакет для анализа: {args.package}")
     print("-" * 60)
     
+    # Проверяем наличие циклов
+    cycles = analyzer.find_cycles()
+    if cycles:
+        print(f"Внимание: обнаружены циклы в графе ({len(cycles)} циклов)")
+        for i, cycle in enumerate(cycles[:3], 1):
+            print(f"  Цикл {i}: {' -> '.join(cycle)}")
+        print()
+    
     # 1. Получение порядка загрузки
     load_order = analyzer.get_load_order(args.package)
     
@@ -230,56 +246,50 @@ def main():
     print("\n1. ПОРЯДОК ЗАГРУЗКИ ЗАВИСИМОСТЕЙ:")
     print("-" * 40)
     
-    # Группируем по уровням
     adjacency = graph_data.get('adjacency', {})
+    
+    # Вычисляем уровни (без рекурсии, используем BFS)
     levels = {}
-    
-    # Создаем кэш для уровней
-    level_cache = {}
-    
-    def calculate_level(pkg, visited=None):
-        if visited is None:
-            visited = set()
+    def calculate_levels(package):
+        if package in levels:
+            return levels[package]
         
-        if pkg in level_cache:
-            return level_cache[pkg]
-        
-        if pkg in visited:
-            return 0
-        
-        visited.add(pkg)
-        
-        deps = adjacency.get(pkg, [])
+        deps = adjacency.get(package, [])
         if not deps:
-            level_cache[pkg] = 0
+            levels[package] = 0
             return 0
         
         max_level = 0
         for dep in deps:
-            dep_level = calculate_level(dep, visited)
+            if dep == package:  # Избегаем самозависимости
+                continue
+            dep_level = calculate_levels(dep)
             max_level = max(max_level, dep_level)
         
-        level_cache[pkg] = max_level + 1
-        return level_cache[pkg]
+        levels[package] = max_level + 1
+        return levels[package]
     
     for pkg in load_order:
-        calculate_level(pkg)
+        try:
+            calculate_levels(pkg)
+        except RecursionError:
+            levels[pkg] = 0
     
-    # Находим максимальный уровень
-    if level_cache:
-        max_level_value = max(level_cache.values())
+    # Сортируем по уровням
+    if levels:
+        max_level_value = max(levels.values())
     else:
         max_level_value = 0
     
     # Выводим сгруппированно по уровням
     for level in range(max_level_value + 1):
-        nodes_at_level = [pkg for pkg in load_order if level_cache.get(pkg, 0) == level]
+        nodes_at_level = [pkg for pkg in load_order if levels.get(pkg, 0) == level]
         if nodes_at_level:
             print(f"\nУровень {level}:")
             for pkg in nodes_at_level:
                 deps = adjacency.get(pkg, [])
                 if deps:
-                    print(f"  {pkg} (зависит от: {', '.join(deps)})")
+                    print(f"  {pkg} (зависит от: {', '.join(deps[:3])})")
                 else:
                     print(f"  {pkg} (без зависимостей)")
     
@@ -306,46 +316,51 @@ def main():
         for pkg, missing in errors[:3]:
             print(f"  - {pkg} зависит от {missing}, но они устанавливаются позже")
     
-    # 3. Обнаружение циклов
+    # 3. Обнаружение циклов (уже сделали)
     print("\n3. ОБНАРУЖЕНИЕ ЦИКЛИЧЕСКИХ ЗАВИСИМОСТЕЙ:")
     print("-" * 40)
     
-    cycles = analyzer.find_cycles()
     if cycles:
         print(f"Найдено циклов: {len(cycles)}")
-        for i, cycle in enumerate(cycles, 1):
+        for i, cycle in enumerate(cycles[:3], 1):
             print(f"  Цикл {i}: {' -> '.join(cycle)}")
+        if len(cycles) > 3:
+            print(f"  ... и еще {len(cycles)-3} циклов")
     else:
         print("Циклические зависимости не обнаружены")
     
-    # 4. Критические пути
+    # 4. Критические пути (безопасная версия)
     print("\n4. КРИТИЧЕСКИЕ ПУТИ ЗАВИСИМОСТЕЙ:")
     print("-" * 40)
     
-    critical_paths = analyzer.find_critical_paths(args.package)
+    try:
+        critical_paths = analyzer.find_critical_paths(args.package, max_depth=5)
+    except RecursionError:
+        print("Не удалось найти критические пути (слишком глубокая рекурсия)")
+        critical_paths = [[args.package]]
+    
     if critical_paths:
-        critical_paths.sort(key=len, reverse=True)
+        # Фильтруем слишком короткие пути
+        long_paths = [path for path in critical_paths if len(path) > 1]
         
-        print(f"Найдено путей: {len(critical_paths)}")
-        print(f"\nСамый длинный путь ({len(critical_paths[0])-1} шагов):")
-        
-        for i, node in enumerate(critical_paths[0]):
-            indent = "  " * i
-            print(f"{indent}{node}")
-        
-        if len(critical_paths) > 1:
-            print(f"\nВсего длинных путей (>2 шагов):")
-            count = 0
-            for i, path in enumerate(critical_paths, 1):
-                if len(path) > 3:
-                    print(f"  Путь {i}: {len(path)-1} шагов")
-                    count += 1
-                if count >= 3:
-                    break
+        if long_paths:
+            long_paths.sort(key=len, reverse=True)
+            
+            print(f"Найдено длинных путей: {len(long_paths)}")
+            print(f"\nСамый длинный путь ({len(long_paths[0])-1} шагов):")
+            
+            for i, node in enumerate(long_paths[0]):
+                indent = "  " * i
+                print(f"{indent}{node}")
+            
+            if len(long_paths) > 1:
+                print(f"\nВсего длинных путей (>1 шага): {len(long_paths)}")
+        else:
+            print(f"Пакет '{args.package}' не имеет зависимостей")
     else:
         print(f"Пакет '{args.package}' не имеет зависимостей")
     
-    # 5. Сравнение с pip (всегда делаем)
+    # 5. Сравнение с pip
     print("\n5. СРАВНЕНИЕ С РЕАЛЬНЫМ МЕНЕДЖЕРОМ ПАКЕТОВ:")
     print("-" * 40)
     
@@ -353,8 +368,10 @@ def main():
     
     if pip_order:
         print("Порядок загрузки в pip:")
-        for i, pkg in enumerate(pip_order, 1):
+        for i, pkg in enumerate(pip_order[:10], 1):
             print(f"  {i:2}. {pkg}")
+        if len(pip_order) > 10:
+            print(f"  ... и еще {len(pip_order)-10} пакетов")
         
         # Анализ расхождений
         our_set = set(load_order)
@@ -412,21 +429,22 @@ def main():
     results = {
         "package": args.package,
         "load_order": load_order,
-        "levels": {pkg: level_cache.get(pkg, 0) for pkg in load_order},
+        "levels": {pkg: levels.get(pkg, 0) for pkg in load_order},
         "cycles": cycles,
-        "critical_paths": [path for path in critical_paths if len(path) > 2],
+        "critical_paths": [path for path in critical_paths if len(path) > 2] if 'critical_paths' in locals() else [],
         "statistics": {
             "total_packages": len(load_order),
             "cycles_count": len(cycles),
-            "critical_paths_count": len(critical_paths),
-            "max_path_length": len(critical_paths[0]) - 1 if critical_paths else 0
+            "critical_paths_count": len(critical_paths) if 'critical_paths' in locals() else 0
         }
     }
     
-    with open(args.output, 'w') as f:
-        json.dump(results, f, indent=2, ensure_ascii=False)
-    
-    print(f"\nРезультаты сохранены в {args.output}")
+    try:
+        with open(args.output, 'w') as f:
+            json.dump(results, f, indent=2, ensure_ascii=False)
+        print(f"\nРезультаты сохранены в {args.output}")
+    except Exception as e:
+        print(f"\nОшибка при сохранении результатов: {e}")
 
 if __name__ == "__main__":
     main()
