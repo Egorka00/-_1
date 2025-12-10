@@ -355,11 +355,7 @@ def main():
     
     if config.get('ascii_tree', False):
         print("  3. ASCII-дерево выведено в консоль")
-    
-    print("\nДля использования D2 кода:")
-    print("  1. Установите D2: https://d2lang.com/")
-    print("  2. Выполните: d2 graph.d2 output.svg")
-    print("  3. Или используйте онлайн: https://play.d2lang.com/")
+
 
 if __name__ == "__main__":
     # Увеличиваем лимит рекурсии на всякий случай
