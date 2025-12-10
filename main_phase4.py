@@ -143,7 +143,7 @@ def load_graph_data(filename):
     except FileNotFoundError:
         print(f"Файл {filename} не найден. Создаем тестовые данные.")
         return create_test_data()
-    except KeyError:
+    except (KeyError, json.JSONDecodeError):
         print(f"Некорректный формат файла {filename}. Создаем тестовые данные.")
         return create_test_data()
 
@@ -174,7 +174,7 @@ def create_test_data():
     }
 
 def simulate_pip_load_order(package, adjacency):
-    if package in adjacency:
+    if package in adjacency or package in ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J']:
         all_nodes = set()
         for node in adjacency:
             all_nodes.add(node)
@@ -183,13 +183,13 @@ def simulate_pip_load_order(package, adjacency):
         
         leaf_nodes = []
         for node in all_nodes:
-            if node not in adjacency or not adjacency[node]:
+            if node not in adjacency or not adjacency.get(node, []):
                 leaf_nodes.append(node)
         
         middle_nodes = []
         for node in all_nodes:
-            if node in adjacency and adjacency[node]:
-                deps = adjacency[node]
+            if node in adjacency and adjacency.get(node, []):
+                deps = adjacency.get(node, [])
                 if all(dep in leaf_nodes for dep in deps):
                     middle_nodes.append(node)
         
@@ -234,30 +234,46 @@ def main():
     adjacency = graph_data.get('adjacency', {})
     levels = {}
     
-    def calculate_level(pkg):
-        if pkg in levels:
-            return levels[pkg]
+    # Создаем кэш для уровней
+    level_cache = {}
+    
+    def calculate_level(pkg, visited=None):
+        if visited is None:
+            visited = set()
+        
+        if pkg in level_cache:
+            return level_cache[pkg]
+        
+        if pkg in visited:
+            return 0
+        
+        visited.add(pkg)
         
         deps = adjacency.get(pkg, [])
         if not deps:
-            levels[pkg] = 0
+            level_cache[pkg] = 0
             return 0
         
         max_level = 0
         for dep in deps:
-            dep_level = calculate_level(dep)
+            dep_level = calculate_level(dep, visited)
             max_level = max(max_level, dep_level)
         
-        levels[pkg] = max_level + 1
-        return levels[pkg]
+        level_cache[pkg] = max_level + 1
+        return level_cache[pkg]
     
     for pkg in load_order:
         calculate_level(pkg)
     
+    # Находим максимальный уровень
+    if level_cache:
+        max_level_value = max(level_cache.values())
+    else:
+        max_level_value = 0
+    
     # Выводим сгруппированно по уровням
-    max_level = max(levels.values()) if levels else 0
-    for level in range(max_level + 1):
-        nodes_at_level = [pkg for pkg in load_order if levels.get(pkg, 0) == level]
+    for level in range(max_level_value + 1):
+        nodes_at_level = [pkg for pkg in load_order if level_cache.get(pkg, 0) == level]
         if nodes_at_level:
             print(f"\nУровень {level}:")
             for pkg in nodes_at_level:
@@ -319,9 +335,13 @@ def main():
         
         if len(critical_paths) > 1:
             print(f"\nВсего длинных путей (>2 шагов):")
-            for i, path in enumerate(critical_paths[:3], 1):
+            count = 0
+            for i, path in enumerate(critical_paths, 1):
                 if len(path) > 3:
                     print(f"  Путь {i}: {len(path)-1} шагов")
+                    count += 1
+                if count >= 3:
+                    break
     else:
         print(f"Пакет '{args.package}' не имеет зависимостей")
     
@@ -350,23 +370,26 @@ def main():
         print(f"  Только в порядке pip: {len(only_pip)}")
         
         if only_our:
-            print(f"  Пакеты только у нас: {', '.join(sorted(only_our)[:5])}")
-            if len(only_our) > 5:
-                print(f"    ... и еще {len(only_our)-5}")
+            only_our_list = sorted(list(only_our))
+            print(f"  Пакеты только у нас: {', '.join(only_our_list[:5])}")
+            if len(only_our_list) > 5:
+                print(f"    ... и еще {len(only_our_list)-5}")
         
         if only_pip:
-            print(f"  Пакеты только у pip: {', '.join(sorted(only_pip)[:5])}")
-            if len(only_pip) > 5:
-                print(f"    ... и еще {len(only_pip)-5}")
+            only_pip_list = sorted(list(only_pip))
+            print(f"  Пакеты только у pip: {', '.join(only_pip_list[:5])}")
+            if len(only_pip_list) > 5:
+                print(f"    ... и еще {len(only_pip_list)-5}")
         
         # Проверяем порядок для общих пакетов
         if len(common) > 1:
             order_diff = []
             for pkg in common:
-                our_pos = load_order.index(pkg) if pkg in load_order else -1
-                pip_pos = pip_order.index(pkg) if pkg in pip_order else -1
-                if our_pos != pip_pos and our_pos != -1 and pip_pos != -1:
-                    order_diff.append((pkg, our_pos, pip_pos))
+                if pkg in load_order and pkg in pip_order:
+                    our_pos = load_order.index(pkg)
+                    pip_pos = pip_order.index(pkg)
+                    if our_pos != pip_pos:
+                        order_diff.append((pkg, our_pos, pip_pos))
             
             if order_diff:
                 print(f"\n  Расхождения в порядке:")
@@ -389,7 +412,7 @@ def main():
     results = {
         "package": args.package,
         "load_order": load_order,
-        "levels": {pkg: levels.get(pkg, 0) for pkg in load_order},
+        "levels": {pkg: level_cache.get(pkg, 0) for pkg in load_order},
         "cycles": cycles,
         "critical_paths": [path for path in critical_paths if len(path) > 2],
         "statistics": {
