@@ -27,20 +27,16 @@ def parse_arguments():
 
 def print_header():
     """Вывод заголовка этапа"""
-    print("=" * 80)
     print("ЭТАП 3: ОСНОВНЫЕ ОПЕРАЦИИ")
-    print("Вариант №6 - Построение графа зависимостей")
-    print("=" * 80)
 
 def print_config(args):
     """Вывод конфигурации"""
     print("\n  КОНФИГУРАЦИЯ:")
-    print(f"  Режим работы:     {args.mode}")
-    print(f"  Пакет:           {args.package}")
-    print(f"  Макс. глубина:   {args.max_depth}")
-    print(f"  Фильтр:          '{args.filter}'")
-    print(f"  Выходной файл:   {args.output}")
-    print("-" * 40)
+    print(f"  Режим работы:{args.mode}")
+    print(f"  Пакет:{args.package}")
+    print(f"  Макс. глубина:{args.max_depth}")
+    print(f"  Фильтр:'{args.filter}'")
+    print(f"  Выходной файл:{args.output}")
 
 def create_test_data():
     """Создание тестового файла, если его нет"""
@@ -125,10 +121,10 @@ def main():
         print(f"Анализ пакета: {args.package}")
         graph.build_from_real_repo(args.package)
     
-    # ============ РЕЗУЛЬТАТЫ ЭТАПА 3 ============
-    print(f"\n{'='*80}")
+    #  РЕЗУЛЬТАТЫ ЭТАПА 3
+
     print("РЕЗУЛЬТАТЫ ЭТАПА 3:")
-    print(f"{'='*80}")
+ 
     
     # 1. Статистика графа
     print(f"\n СТАТИСТИКА ГРАФА:")
