@@ -1,13 +1,6 @@
 #!/usr/bin/env python3
 """
 ЭТАП 3: Основные операции
-Вариант №6
-Требования:
-1. BFS с рекурсией
-2. Учёт максимальной глубины
-3. Фильтрация по подстроке
-4. Обработка циклических зависимостей
-5. Режим тестирования
 """
 
 import argparse
@@ -98,7 +91,7 @@ PP TEST2  # Будет отфильтрован"""
     
     with open('test_repo.txt', 'w') as f:
         f.write(test_data)
-    print("✅ Создан тестовый файл test_repo.txt")
+    print("Создан тестовый файл test_repo.txt")
 
 def main():
     """Основная функция этапа 3"""
@@ -118,17 +111,17 @@ def main():
     
     # Построение графа в зависимости от режима
     if args.mode == 'test':
-        print(f"\n📁 РЕЖИМ ТЕСТИРОВАНИЯ")
+        print(f"\n РЕЖИМ ТЕСТИРОВАНИЯ")
         print(f"Чтение из файла: {args.test_file}")
         
         try:
             graph.build_from_test_file(args.test_file)
         except FileNotFoundError:
-            print(f"⚠️  Файл {args.test_file} не найден, создаём тестовые данные...")
+            print(f"Файл {args.test_file} не найден, создаём тестовые данные...")
             create_test_data()
             graph.build_from_test_file('test_repo.txt')
     else:
-        print(f"\n🌐 РЕЖИМ РЕАЛЬНОГО РЕПОЗИТОРИЯ")
+        print(f"\n РЕЖИМ РЕАЛЬНОГО РЕПОЗИТОРИЯ")
         print(f"Анализ пакета: {args.package}")
         graph.build_from_real_repo(args.package)
     
@@ -144,7 +137,7 @@ def main():
     print(f"  Максимальная глубина анализа: {args.max_depth}")
     
     # 2. Обход графа (BFS с рекурсией)
-    print(f"\n🌳 ОБХОД ГРАФА (BFS с рекурсией):")
+    print(f"\n ОБХОД ГРАФА (BFS с рекурсией):")
     print("  Иерархия зависимостей:")
     
     # Показываем структуру графа
@@ -194,16 +187,16 @@ def main():
     cycles = graph.detect_cycles()
     
     if cycles:
-        print(f"  ⚠️  Обнаружено циклов: {len(cycles)}")
+        print(f"Обнаружено циклов: {len(cycles)}")
         for i, cycle in enumerate(cycles, 1):
             print(f"    Цикл {i}: {' → '.join(cycle)}")
         
-        print(f"\n  🛠️  ОБРАБОТКА ЦИКЛОВ:")
+        print(f"\n ОБРАБОТКА ЦИКЛОВ:")
         print("    1. Обнаружение с помощью DFS с отслеживанием стека")
         print("    2. Визуальная маркировка циклических зависимостей")
         print("    3. Предотвращение бесконечной рекурсии")
     else:
-        print(f"  ✅ Циклические зависимости не обнаружены")
+        print(f"Циклические зависимости не обнаружены")
     
     # 5. Демонстрация режима тестирования
     print(f"\n🧪 ДЕМОНСТРАЦИЯ РЕЖИМА ТЕСТИРОВАНИЯ:")
@@ -229,7 +222,7 @@ def main():
         print(f"    • Циклов: {len(cycles)}")
     
     # Сохранение результатов
-    print(f"\n💾 СОХРАНЕНИЕ РЕЗУЛЬТАТОВ...")
+    print(f"\n СОХРАНЕНИЕ РЕЗУЛЬТАТОВ...")
     
     results = {
         "phase": 3,
@@ -261,17 +254,7 @@ def main():
     with open(args.output, 'w') as f:
         json.dump(results, f, indent=2, ensure_ascii=False)
     
-    print(f"✅ Результаты сохранены в {args.output}")
-    
-    print(f"\n{'='*80}")
-    print("✅ ЭТАП 3 ЗАВЕРШЕН")
-    print("Критерии выполнения:")
-    print("1. ✅ BFS с рекурсией - реализован")
-    print("2. ✅ Учёт максимальной глубины - реализован")
-    print("3. ✅ Фильтрация по подстроке - реализована")
-    print("4. ✅ Обработка циклических зависимостей - реализована")
-    print("5. ✅ Режим тестирования - продемонстрирован")
-    print(f"{'='*80}")
+    print(f" Результаты сохранены в {args.output}")
 
 if __name__ == "__main__":
     main()
