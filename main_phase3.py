@@ -34,7 +34,7 @@ def print_header():
 
 def print_config(args):
     """Вывод конфигурации"""
-    print("\n⚙️  КОНФИГУРАЦИЯ:")
+    print("\n  КОНФИГУРАЦИЯ:")
     print(f"  Режим работы:     {args.mode}")
     print(f"  Пакет:           {args.package}")
     print(f"  Макс. глубина:   {args.max_depth}")
@@ -106,7 +106,7 @@ def main():
     }
     
     # Инициализация графа
-    print("\n🔧 ИНИЦИАЛИЗАЦИЯ ГРАФА...")
+    print("\n ИНИЦИАЛИЗАЦИЯ ГРАФА...")
     graph = DependencyGraph(config)
     
     # Построение графа в зависимости от режима
@@ -131,7 +131,7 @@ def main():
     print(f"{'='*80}")
     
     # 1. Статистика графа
-    print(f"\n📊 СТАТИСТИКА ГРАФА:")
+    print(f"\n СТАТИСТИКА ГРАФА:")
     print(f"  Всего узлов (пакетов): {len(graph.nodes)}")
     print(f"  Всего рёбер (зависимостей): {len(graph.edges)}")
     print(f"  Максимальная глубина анализа: {args.max_depth}")
@@ -176,14 +176,14 @@ def main():
     print_level(root_package, 0, visited_set)
     
     # 3. Фильтрация по подстроке
-    print(f"\n🔍 ФИЛЬТРАЦИЯ ПО ПОДСТРОКЕ:")
+    print(f"\n ФИЛЬТРАЦИЯ ПО ПОДСТРОКЕ:")
     print(f"  Исключаются пакеты, содержащие: '{args.filter}'")
     
     filtered_count = sum(1 for node in graph.nodes if args.filter in node)
     print(f"  Отфильтровано пакетов: {filtered_count}")
     
     # 4. Обработка циклических зависимостей
-    print(f"\n🔄 ОБРАБОТКА ЦИКЛИЧЕСКИХ ЗАВИСИМОСТЕЙ:")
+    print(f"\n ОБРАБОТКА ЦИКЛИЧЕСКИХ ЗАВИСИМОСТЕЙ:")
     cycles = graph.detect_cycles()
     
     if cycles:
@@ -199,7 +199,7 @@ def main():
         print(f"Циклические зависимости не обнаружены")
     
     # 5. Демонстрация режима тестирования
-    print(f"\n🧪 ДЕМОНСТРАЦИЯ РЕЖИМА ТЕСТИРОВАНИЯ:")
+    print(f"\n ДЕМОНСТРАЦИЯ РЕЖИМА ТЕСТИРОВАНИЯ:")
     
     # Создаём разные тестовые сценарии
     test_scenarios = [
