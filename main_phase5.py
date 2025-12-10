@@ -111,9 +111,7 @@ def load_graph_structure():
 
 def demonstrate_three_packages():
     """Демонстрация для трех различных пакетов"""
-    print("\n" + "=" * 70)
     print("ДЕМОНСТРАЦИЯ ВИЗУАЛИЗАЦИИ ДЛЯ ТРЕХ ПАКЕТОВ")
-    print("=" * 70)
     
     demo_packages = [
         {
@@ -170,17 +168,15 @@ def demonstrate_three_packages():
         for line in tree_lines:
             print(f"     {line}")
     
-    print("\n" + "=" * 70)
 
 def compare_with_official_tools(package, graph_structure):
     """Сравнение с официальными инструментами визуализации"""
-    print("\n" + "=" * 70)
     print("СРАВНЕНИЕ С ШТАТНЫМИ ИНСТРУМЕНТАМИ ВИЗУАЛИЗАЦИИ")
-    print("=" * 70)
+
     
     # Имитация вывода pipdeptree (без рекурсии!)
     print("\n1. Вывод pipdeptree (имитация):")
-    print("-" * 40)
+
     
     adjacency = graph_structure.get('adjacency', {})
     
@@ -222,7 +218,6 @@ def compare_with_official_tools(package, graph_structure):
     
     # Сравнение возможностей
     print("\n3. СРАВНЕНИЕ ВОЗМОЖНОСТЕЙ:")
-    print("-" * 40)
     
     comparison_table = [
         ["Функция", "Наш инструмент", "pipdeptree", "pip graph"],
@@ -241,7 +236,6 @@ def compare_with_official_tools(package, graph_structure):
     
     # Анализ расхождений
     print("\n4. АНАЛИЗ РАСХОЖДЕНИЙ:")
-    print("-" * 40)
     
     print("  Наш инструмент может показывать больше зависимостей из-за:")
     print("  1. Полного обхода транзитивных зависимостей")
@@ -259,12 +253,9 @@ def compare_with_official_tools(package, graph_structure):
     print("  3. pip graph показывает плоский список зависимостей")
 
 def main():
-    args = parse_arguments()
-    
-    print("=" * 70)
+    args = parse_arguments()    
+
     print("ЭТАП 5: ВИЗУАЛИЗАЦИЯ ГРАФА ЗАВИСИМОСТЕЙ")
-    print("Вариант №6")
-    print("=" * 70)
     
     # Загрузка данных
     print("\nЗагрузка данных...")
@@ -285,11 +276,10 @@ def main():
     package = phase4_data.get('package', 'A')
     
     print(f"\nАнализируем пакет: {package}")
-    print("-" * 40)
     
     # 1. Генерация D2 кода
     print("\n1. ГЕНЕРАЦИЯ ТЕКСТОВОГО ПРЕДСТАВЛЕНИЯ НА ЯЗЫКЕ D2:")
-    print("-" * 40)
+
     
     d2_code = visualizer.generate_d2(package, graph_structure, phase4_data)
     
@@ -309,7 +299,7 @@ def main():
     
     # 2. Сохранение SVG изображения
     print("\n2. СОХРАНЕНИЕ ИЗОБРАЖЕНИЯ В ФОРМАТЕ SVG:")
-    print("-" * 40)
+
     
     success = visualizer.save_svg(package, graph_structure, phase4_data)
     
@@ -333,7 +323,6 @@ def main():
     # 3. ASCII-дерево
     if config.get('ascii_tree', False) or args.ascii_tree:
         print("\n3. ASCII-ДЕРЕВО ЗАВИСИМОСТЕЙ:")
-        print("-" * 40)
         
         try:
             ascii_tree = visualizer.generate_ascii_tree(package, graph_structure)
@@ -353,14 +342,11 @@ def main():
     
     # 5. Сравнение с официальными инструментами
     print("\n5. СРАВНЕНИЕ С ОФИЦИАЛЬНЫМИ ИНСТРУМЕНТАМИ:")
-    print("-" * 40)
     
     compare_with_official_tools(package, graph_structure)
     
     # Итоги
-    print("\n" + "=" * 70)
     print("ИТОГИ ЭТАПА 5:")
-    print("=" * 70)
     
     print("\nСозданы файлы:")
     print(f"  1. graph.d2 - текстовое представление на языке D2")
