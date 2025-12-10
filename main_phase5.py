@@ -1,17 +1,12 @@
 #!/usr/bin/env python3
 """
 Вариант №6 - Визуализация графа зависимостей
-Требования:
-1. Сформировать текстовое представление графа на языке D2
-2. Сохранить изображение графа в формате SVG
-3. Если задан параметр ascii_tree, вывести зависимости в виде ASCII-дерева
-4. Продемонстрировать примеры визуализации для трех пакетов
-5. Сравнить с выводом штатных инструментов визуализации
 """
 
 import argparse
 import json
 import os
+import sys
 from visualizer import GraphVisualizer
 
 def parse_arguments():
@@ -59,7 +54,6 @@ def load_phase4_results(filename):
             data = json.load(f)
         
         if 'graph' not in data:
-            # Если в файле только результаты этапа 4
             return data
         
         return data
@@ -96,7 +90,7 @@ def load_graph_structure():
             data = json.load(f)
             return data['graph']
     except FileNotFoundError:
-        # Создаем тестовую структуру
+        # Создаем тестовую структуру без циклов
         return {
             'nodes': ['A', 'B', 'C', 'D', 'E', 'F', 'G', 'H', 'I', 'J', 'K', 'L'],
             'edges': [
@@ -133,9 +127,9 @@ def demonstrate_three_packages():
             'description': 'Граф с минимальными зависимостями'
         },
         {
-            'name': 'requests',
-            'deps': ['urllib3', 'certifi', 'chardet', 'idna'],
-            'description': 'Реальный пакет Python'
+            'name': 'simple',
+            'deps': ['dep1', 'dep2'],
+            'description': 'Простой пример'
         }
     ]
     
@@ -153,22 +147,13 @@ def demonstrate_three_packages():
             }
         }
         
-        # Для реального пакета добавляем больше зависимостей
-        if package_info['name'] == 'requests':
-            demo_graph['adjacency'].update({
-                'urllib3': ['idna', 'certifi'],
-                'chardet': [],
-                'certifi': [],
-                'idna': []
-            })
-        
         # Генерация D2 кода
         print("   D2 код (фрагмент):")
         d2_code = demo_visualizer.generate_d2_simple(package_info['name'], demo_graph['adjacency'])
-        lines = d2_code.split('\n')[:10]
+        lines = d2_code.split('\n')[:5]
         for line in lines:
             print(f"     {line}")
-        if len(d2_code.split('\n')) > 10:
+        if len(d2_code.split('\n')) > 5:
             print("     ...")
         
         # Создаем изображение
@@ -179,14 +164,11 @@ def demonstrate_three_packages():
             print(f"   Ошибка создания изображения: {e}")
         
         # ASCII-дерево
-        if package_info['name'] != 'requests':  # Для простоты
-            ascii_tree = demo_visualizer.generate_ascii_tree_simple(package_info['name'], demo_graph['adjacency'])
-            print("   ASCII-дерево:")
-            tree_lines = ascii_tree.split('\n')[:5]
-            for line in tree_lines:
-                print(f"     {line}")
-            if len(ascii_tree.split('\n')) > 5:
-                print("     ...")
+        ascii_tree = demo_visualizer.generate_ascii_tree_simple(package_info['name'], demo_graph['adjacency'])
+        print("   ASCII-дерево:")
+        tree_lines = ascii_tree.split('\n')[:5]
+        for line in tree_lines:
+            print(f"     {line}")
     
     print("\n" + "=" * 70)
 
@@ -196,22 +178,31 @@ def compare_with_official_tools(package, graph_structure):
     print("СРАВНЕНИЕ С ШТАТНЫМИ ИНСТРУМЕНТАМИ ВИЗУАЛИЗАЦИИ")
     print("=" * 70)
     
-    # Имитация вывода pipdeptree
+    # Имитация вывода pipdeptree (без рекурсии!)
     print("\n1. Вывод pipdeptree (имитация):")
     print("-" * 40)
     
     adjacency = graph_structure.get('adjacency', {})
     
-    def print_pipdeptree(pkg, level=0):
-        indent = "  " * level
-        print(f"{indent}{pkg}")
-        
-        deps = adjacency.get(pkg, [])
-        for dep in sorted(deps):
-            print_pipdeptree(dep, level + 1)
-    
     if package in adjacency:
-        print_pipdeptree(package)
+        # Используем BFS вместо рекурсии
+        visited = set()
+        queue = [(package, 0)]
+        
+        while queue:
+            current_pkg, level = queue.pop(0)
+            if current_pkg in visited:
+                continue
+                
+            indent = "  " * level
+            print(f"{indent}{current_pkg}")
+            visited.add(current_pkg)
+            
+            # Добавляем зависимости
+            deps = adjacency.get(current_pkg, [])
+            for dep in sorted(deps):
+                if dep not in visited:
+                    queue.append((dep, level + 1))
     else:
         print(f"Пакет {package} не найден в графе")
     
@@ -235,7 +226,7 @@ def compare_with_official_tools(package, graph_structure):
     
     comparison_table = [
         ["Функция", "Наш инструмент", "pipdeptree", "pip graph"],
-        ["-"*40, "-"*40, "-"*40, "-"*40],
+        ["-"*15, "-"*15, "-"*15, "-"*15],
         ["Формат вывода", "D2, SVG, ASCII", "Текст, дерево", "Текст, граф"],
         ["Визуализация", "Графическая (SVG)", "Текстовая", "Текстовая"],
         ["Настройка стилей", "Да", "Нет", "Нет"],
@@ -246,7 +237,7 @@ def compare_with_official_tools(package, graph_structure):
     ]
     
     for row in comparison_table:
-        print(f"  {row[0]:<20} {row[1]:<15} {row[2]:<15} {row[3]:<15}")
+        print(f"  {row[0]:<15} {row[1]:<15} {row[2]:<15} {row[3]:<15}")
     
     # Анализ расхождений
     print("\n4. АНАЛИЗ РАСХОЖДЕНИЙ:")
@@ -303,13 +294,13 @@ def main():
     d2_code = visualizer.generate_d2(package, graph_structure, phase4_data)
     
     # Показываем часть кода
-    print("Сгенерированный код D2 (первые 20 строк):")
+    print("Сгенерированный код D2 (первые 15 строк):")
     lines = d2_code.split('\n')
-    for i, line in enumerate(lines[:20], 1):
+    for i, line in enumerate(lines[:15], 1):
         print(f"{i:3}: {line}")
     
-    if len(lines) > 20:
-        print(f"... и еще {len(lines) - 20} строк")
+    if len(lines) > 15:
+        print(f"... и еще {len(lines) - 15} строк")
     
     # Сохраняем полный код
     with open('graph.d2', 'w') as f:
@@ -332,18 +323,27 @@ def main():
         else:
             print("Предупреждение: файл не найден после сохранения")
     else:
-        print("Не удалось сохранить изображение. Проверьте установку Graphviz.")
-        print("Установите Graphviz: https://graphviz.org/download/")
-        print("Или используйте онлайн-конвертер: https://dreampuf.github.io/GraphvizOnline/")
-        print("Скопируйте код из graph.d2 в онлайн-конвертер")
+        print("Не удалось сохранить изображение.")
+        print("Советы:")
+        print("  1. Установите Graphviz: https://graphviz.org/download/")
+        print("  2. Установите D2: https://d2lang.com/")
+        print("  3. Используйте онлайн-конвертер: https://dreampuf.github.io/GraphvizOnline/")
+        print("     Скопируйте код из graph.d2 в онлайн-конвертер")
     
     # 3. ASCII-дерево
     if config.get('ascii_tree', False) or args.ascii_tree:
         print("\n3. ASCII-ДЕРЕВО ЗАВИСИМОСТЕЙ:")
         print("-" * 40)
         
-        ascii_tree = visualizer.generate_ascii_tree(package, graph_structure)
-        print(ascii_tree)
+        try:
+            ascii_tree = visualizer.generate_ascii_tree(package, graph_structure)
+            print(ascii_tree)
+        except RecursionError:
+            print("Не удалось построить ASCII-дерево (циклы в графе)")
+            # Показываем простое дерево
+            adjacency = graph_structure.get('adjacency', {})
+            simple_tree = visualizer.generate_ascii_tree_simple(package, adjacency)
+            print(simple_tree)
     
     # 4. Демонстрация для трех пакетов
     if args.demo:
@@ -364,7 +364,8 @@ def main():
     
     print("\nСозданы файлы:")
     print(f"  1. graph.d2 - текстовое представление на языке D2")
-    print(f"  2. {config['output_image']} - графическое представление (SVG)")
+    if success:
+        print(f"  2. {config['output_image']} - графическое представление (SVG)")
     
     if config.get('ascii_tree', False):
         print("  3. ASCII-дерево выведено в консоль")
@@ -375,4 +376,6 @@ def main():
     print("  3. Или используйте онлайн: https://play.d2lang.com/")
 
 if __name__ == "__main__":
+    # Увеличиваем лимит рекурсии на всякий случай
+    sys.setrecursionlimit(10000)
     main()
