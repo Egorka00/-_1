@@ -1,6 +1,4 @@
-package: "example-package"
-repository: "https://github.com/Egorka00/-_1"
-mode: "remote"
-output_file: "graph.png"
+# Конфигурация для этапа 5
+package_name: A
+output_image: graph.svg
 ascii_tree: false
-max_depth: 1
