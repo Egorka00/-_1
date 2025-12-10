@@ -1,13 +1,13 @@
 #!/usr/bin/env python3
 """
 Модуль визуализации графа зависимостей
-Вариант №6: D2 диаграммы, SVG, ASCII-дерево
 """
 
 import os
 import subprocess
 import tempfile
 from datetime import datetime
+from collections import deque
 
 class GraphVisualizer:
     def __init__(self, config):
@@ -33,18 +33,6 @@ class GraphVisualizer:
         d2_lines.append("direction: down")
         d2_lines.append("")
         
-        # Стили узлов по уровням
-        d2_lines.append("styles: {")
-        d2_lines.append("  node: {")
-        d2_lines.append("    style: {")
-        d2_lines.append("      fill: lightblue")
-        d2_lines.append("      stroke: darkblue")
-        d2_lines.append("      stroke-width: 2")
-        d2_lines.append("    }")
-        d2_lines.append("  }")
-        d2_lines.append("}")
-        d2_lines.append("")
-        
         # Основной пакет
         d2_lines.append(f"{package}: {{")
         d2_lines.append(f"  style.fill: lightgreen")
@@ -54,7 +42,7 @@ class GraphVisualizer:
         d2_lines.append("}")
         d2_lines.append("")
         
-        # Все узлы с уровнями
+        # Все узлы
         all_nodes = set()
         for node in adjacency:
             all_nodes.add(node)
@@ -90,26 +78,6 @@ class GraphVisualizer:
             for dep in adjacency[node]:
                 d2_lines.append(f"{node} -> {dep}")
         
-        # Группировка по уровням
-        d2_lines.append("")
-        d2_lines.append("# Group by levels")
-        
-        max_level = max(levels.values()) if levels else 0
-        for level in range(max_level + 1):
-            nodes_in_level = [n for n, l in levels.items() if l == level]
-            if nodes_in_level:
-                d2_lines.append(f"level_{level}: {{")
-                d2_lines.append(f"  shape: rectangle")
-                d2_lines.append(f"  style.stroke-dash: 3")
-                d2_lines.append(f"  style.fill: transparent")
-                d2_lines.append(f"  label: \"Level {level}\"")
-                d2_lines.append("}")
-                
-                for node in nodes_in_level:
-                    d2_lines.append(f"{node}: {{")
-                    d2_lines.append(f"  container: level_{level}")
-                    d2_lines.append("}")
-        
         return "\n".join(d2_lines)
     
     def generate_d2_simple(self, package, adjacency):
@@ -132,52 +100,18 @@ class GraphVisualizer:
         return "\n".join(d2_lines)
     
     def save_svg(self, package, graph_structure, phase4_data):
-        """Сохранение графа в SVG с помощью D2"""
+        """Сохранение графа в SVG"""
         
         try:
-            # Проверяем наличие D2
-            result = subprocess.run(['d2', '--version'], 
-                                  capture_output=True, 
-                                  text=True,
-                                  timeout=5)
-            
-            if result.returncode != 0:
-                print("D2 не установлен. Используем Graphviz как fallback.")
-                return self._save_with_graphviz(package, graph_structure, phase4_data)
-            
-            # Генерируем D2 код
-            d2_code = self.generate_d2(package, graph_structure, phase4_data)
-            
-            # Сохраняем во временный файл
-            with tempfile.NamedTemporaryFile(mode='w', suffix='.d2', delete=False) as tmp:
-                tmp.write(d2_code)
-                d2_file = tmp.name
-            
-            # Конвертируем в SVG
-            svg_file = self.output_image
-            cmd = ['d2', d2_file, svg_file]
-            
-            print(f"Выполняю: {' '.join(cmd)}")
-            result = subprocess.run(cmd, capture_output=True, text=True, timeout=30)
-            
-            # Удаляем временный файл
-            try:
-                os.unlink(d2_file)
-            except:
-                pass
-            
-            if result.returncode == 0:
-                return True
-            else:
-                print(f"Ошибка D2: {result.stderr}")
-                return self._save_with_graphviz(package, graph_structure, phase4_data)
-                
-        except (subprocess.TimeoutExpired, FileNotFoundError, Exception) as e:
-            print(f"Ошибка при использовании D2: {e}")
+            # Используем Graphviz как основной вариант
             return self._save_with_graphviz(package, graph_structure, phase4_data)
+                
+        except Exception as e:
+            print(f"Ошибка при сохранении: {e}")
+            return False
     
     def _save_with_graphviz(self, package, graph_structure, phase4_data):
-        """Fallback: использование Graphviz"""
+        """Использование Graphviz"""
         try:
             from graphviz import Digraph
             
@@ -194,10 +128,12 @@ class GraphVisualizer:
                 for dep in adjacency[node]:
                     all_nodes.add(dep)
             
+            # Добавляем основной пакет
+            dot.node(package, style='filled', fillcolor='lightgreen')
+            
+            # Добавляем остальные узлы
             for node in all_nodes:
-                if node == package:
-                    dot.node(node, style='filled', fillcolor='lightgreen')
-                else:
+                if node != package:
                     level = levels.get(node, 0)
                     if level == 0:
                         dot.node(node, style='filled', fillcolor='lightyellow')
@@ -240,19 +176,23 @@ class GraphVisualizer:
         except:
             return False
     
-    def generate_ascii_tree(self, package, graph_structure):
-        """Генерация ASCII-дерева"""
+    def generate_ascii_tree(self, package, graph_structure, max_depth=10):
+        """Генерация ASCII-дерева с защитой от циклов"""
         adjacency = graph_structure.get('adjacency', {})
         
         result = []
-        visited = set()
+        visited_in_path = set()
         
-        def build_tree(node, prefix="", is_last=True):
-            if node in visited:
+        def build_tree(node, prefix="", is_last=True, depth=0):
+            if depth > max_depth:
+                result.append(f"{prefix}{'└── ' if is_last else '├── '}...")
+                return
+            
+            if node in visited_in_path:
                 result.append(f"{prefix}{'└── ' if is_last else '├── '}{node} (цикл)")
                 return
             
-            visited.add(node)
+            visited_in_path.add(node)
             
             if prefix:
                 connector = '└── ' if is_last else '├── '
@@ -267,21 +207,45 @@ class GraphVisualizer:
             
             for i, dep in enumerate(sorted_deps):
                 is_last_dep = (i == len(sorted_deps) - 1)
-                build_tree(dep, new_prefix, is_last_dep)
+                build_tree(dep, new_prefix, is_last_dep, depth + 1)
+            
+            visited_in_path.remove(node)
         
         build_tree(package)
         return "\n".join(result)
     
     def generate_ascii_tree_simple(self, package, adjacency):
-        """Простая версия ASCII-дерева"""
+        """Простая версия ASCII-дерева (без рекурсии)"""
         result = []
         
-        result.append(package)
-        if package in adjacency:
-            for i, dep in enumerate(adjacency[package]):
-                if i == len(adjacency[package]) - 1:
-                    result.append(f"└── {dep}")
+        # Используем BFS для обхода
+        visited = set()
+        queue = deque([(package, 0, [])])  # (node, level, path)
+        
+        while queue:
+            current, level, path = queue.popleft()
+            
+            if current in visited:
+                continue
+            
+            visited.add(current)
+            
+            # Строим отступ
+            line_parts = []
+            for i in range(level):
+                if i == level - 1:
+                    line_parts.append("└── " if i == level - 1 else "├── ")
                 else:
-                    result.append(f"├── {dep}")
+                    line_parts.append("    " if path[i] else "│   ")
+            
+            line = "".join(line_parts) + current
+            result.append(line)
+            
+            # Добавляем зависимости
+            deps = adjacency.get(current, [])
+            for i, dep in enumerate(sorted(deps)):
+                is_last = (i == len(deps) - 1)
+                new_path = path + [is_last]
+                queue.append((dep, level + 1, new_path))
         
         return "\n".join(result)
