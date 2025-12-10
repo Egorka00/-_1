@@ -217,13 +217,11 @@ def main():
     args = parse_arguments()
     
     print("Вариант №6 - Порядок загрузки зависимостей")
-    print("=" * 60)
     
     graph_data = load_graph_data(args.input)
     analyzer = DependencyAnalyzer(graph_data)
     
     print(f"Пакет для анализа: {args.package}")
-    print("-" * 60)
     
     # Проверяем наличие циклов
     cycles = analyzer.find_cycles()
@@ -244,7 +242,6 @@ def main():
         return
     
     print("\n1. ПОРЯДОК ЗАГРУЗКИ ЗАВИСИМОСТЕЙ:")
-    print("-" * 40)
     
     adjacency = graph_data.get('adjacency', {})
     
@@ -297,7 +294,7 @@ def main():
     
     # 2. Проверка корректности
     print("\n2. ПРОВЕРКА КОРРЕКТНОСТИ ПОРЯДКА:")
-    print("-" * 40)
+
     
     installed = set()
     errors = []
@@ -318,7 +315,6 @@ def main():
     
     # 3. Обнаружение циклов (уже сделали)
     print("\n3. ОБНАРУЖЕНИЕ ЦИКЛИЧЕСКИХ ЗАВИСИМОСТЕЙ:")
-    print("-" * 40)
     
     if cycles:
         print(f"Найдено циклов: {len(cycles)}")
@@ -331,7 +327,6 @@ def main():
     
     # 4. Критические пути (безопасная версия)
     print("\n4. КРИТИЧЕСКИЕ ПУТИ ЗАВИСИМОСТЕЙ:")
-    print("-" * 40)
     
     try:
         critical_paths = analyzer.find_critical_paths(args.package, max_depth=5)
@@ -362,7 +357,6 @@ def main():
     
     # 5. Сравнение с pip
     print("\n5. СРАВНЕНИЕ С РЕАЛЬНЫМ МЕНЕДЖЕРОМ ПАКЕТОВ:")
-    print("-" * 40)
     
     pip_order = simulate_pip_load_order(args.package, adjacency)
     
