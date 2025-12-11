@@ -204,7 +204,6 @@ def compare_with_official_tools(package, graph_structure):
     
     # Имитация вывода pip graph
     print("\n2. Вывод pip graph (имитация):")
-    print("-" * 40)
     
     all_edges = []
     for node in adjacency:
@@ -300,12 +299,7 @@ def main():
             print("Предупреждение: файл не найден после сохранения")
     else:
         print("Не удалось сохранить изображение.")
-        print("Советы:")
-        print("  1. Установите Graphviz: https://graphviz.org/download/")
-        print("  2. Установите D2: https://d2lang.com/")
-        print("  3. Используйте онлайн-конвертер: https://dreampuf.github.io/GraphvizOnline/")
-        print("     Скопируйте код из graph.d2 в онлайн-конвертер")
-    
+
     # 3. ASCII-дерево
     if config.get('ascii_tree', False) or args.ascii_tree:
         print("\n3. ASCII-ДЕРЕВО ЗАВИСИМОСТЕЙ:")
