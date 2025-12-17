@@ -1,4 +1,0 @@
-# Конфигурация для этапа 5
-package_name: A
-output_image: graph.svg
-ascii_tree: false
