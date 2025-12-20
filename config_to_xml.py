@@ -1,8 +1,13 @@
 #!/usr/bin/env python3
+"""
+САМЫЙ ПРОСТОЙ конвертер конфигураций в XML (Вариант 6)
+Просто запустите: python config_to_xml.py ваш_файл.conf
+"""
+
 import sys
 import re
 
-#  ПРОСТОЙ ПАРСЕР 
+# ========== ПРОСТОЙ ПАРСЕР ==========
 
 def parse_config(text):
     """Простой парсер - ищет шаблоны в тексте"""
@@ -169,7 +174,7 @@ def main():
         with open(filename, 'r', encoding='utf-8') as f:
             text = f.read()
         
-        print(f"Читаем файл: {filename}")
+        print(f"=== Читаем файл: {filename} ===")
         print()
         
         # Парсим
@@ -190,13 +195,13 @@ def main():
         
         # Также показываем, что распарсили (для отладки)
         print()
-        print("=== Что распарсили (для отладки)")
+        print("=== Что распарсили (для отладки) ===")
         for item in parsed:
             print(f"  {item}")
         
         if constants:
             print()
-            print("Константы")
+            print("=== Константы ===")
             for name, value in constants.items():
                 print(f"  {name} = {value}")
                 
@@ -208,6 +213,7 @@ def main():
 # ========== ПРИМЕР КОНФИГУРАЦИИ ==========
 
 EXAMPLE_CONFIG = """
+# Пример конфигурации для Варианта 6
 var basePort 8080;
 var offset 20;
 
@@ -225,7 +231,7 @@ server {
 
 def test():
     """Проверка работы программы"""
-    print("ТЕСТ ПРОГРАММЫ")
+    print("=== ТЕСТ ПРОГРАММЫ ===")
     print()
     print("Тестовый конфиг:")
     print(EXAMPLE_CONFIG)
@@ -249,13 +255,13 @@ def test():
 
 # ========== ЗАПУСК ==========
 
-if __name__ == "main":
+if __name__ == "__main__":
     # Если не переданы аргументы - показываем тест
     if len(sys.argv) == 1:
         test()
         print()
         print("="*50)
         print("Чтобы использовать с файлом:")
-        print("python config_to_xml.py ваш_файл.conf")
+        print("  python config_to_xml.py ваш_файл.conf")
     else:
         main()
