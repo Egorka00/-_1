@@ -17,7 +17,7 @@ def parse_config(text):
     
     for line in lines:
         line = line.strip()
-        if not line:
+        if not line or line.startswith('#'):
             continue
             
         # 1. Константа: var имя значение;
@@ -60,20 +60,51 @@ def parse_config(text):
                 expr = value[1:-1]  # убираем §
                 parts = expr.split()
                 
-                if len(parts) == 3:  # имя число операция
-                    const_name, num, op = parts
-                    if const_name in constants:
-                        const_val = constants[const_name]
-                        num_val = float(num) if '.' in num else int(num)
+                # Пытаемся вычислить
+                try:
+                    # Пример: §basePort offset +§
+                    # или: §basePort 100 +§
+                    
+                    # Вариант 1: константа число операция (например: basePort 100 +)
+                    if len(parts) == 3:
+                        const_or_num1, const_or_num2, op = parts
                         
+                        # Получаем первое значение
+                        if const_or_num1 in constants:
+                            val1 = constants[const_or_num1]
+                        elif re.match(r'^[\d\.]+$', const_or_num1):
+                            val1 = float(const_or_num1) if '.' in const_or_num1 else int(const_or_num1)
+                        else:
+                            val1 = 0  # по умолчанию
+                        
+                        # Получаем второе значение
+                        if const_or_num2 in constants:
+                            val2 = constants[const_or_num2]
+                        elif re.match(r'^[\d\.]+$', const_or_num2):
+                            val2 = float(const_or_num2) if '.' in const_or_num2 else int(const_or_num2)
+                        else:
+                            val2 = 0  # по умолчанию
+                        
+                        # Выполняем операцию
                         if op == '+':
-                            result_val = const_val + num_val
+                            result_val = val1 + val2
                         elif op == '-':
-                            result_val = const_val - num_val
+                            result_val = val1 - val2
                         else:
                             result_val = f"UNKNOWN_OP_{op}"
                         
                         result.append(('pair', key, ('number', result_val)))
+                        
+                    # Вариант 2: просто имя константы
+                    elif len(parts) == 1 and parts[0] in constants:
+                        result_val = constants[parts[0]]
+                        result.append(('pair', key, ('number', result_val)))
+                        
+                    else:
+                        result.append(('pair', key, ('string', f"EXPR:{expr}")))
+                        
+                except Exception as e:
+                    result.append(('pair', key, ('string', f"ERROR:{e}")))
             
             # Массив: #(...)
             elif value.startswith('#(') and value.endswith(')'):
@@ -86,7 +117,17 @@ def parse_config(text):
                     elif re.match(r'^[\d\.]+$', item):
                         val = float(item) if '.' in item else int(item)
                         array_items.append(('number', val))
+                    else:
+                        array_items.append(('string', item))
                 result.append(('pair', key, ('array', array_items)))
+            
+            # Булево значение
+            elif value in ['true', 'false']:
+                result.append(('pair', key, ('boolean', value)))
+            
+            # Просто строка (что не распознано)
+            else:
+                result.append(('pair', key, ('string', value)))
     
     return result, constants
 
@@ -104,6 +145,8 @@ def to_xml(parsed_data, dict_name):
             if value_type == 'string':
                 xml_lines.append(f'  <{key}>{value}</{key}>')
             elif value_type == 'number':
+                xml_lines.append(f'  <{key}>{value}</{key}>')
+            elif value_type == 'boolean':
                 xml_lines.append(f'  <{key}>{value}</{key}>')
             elif value_type == 'array':
                 xml_lines.append(f'  <{key}>')
@@ -179,10 +222,8 @@ server {
     port = §basePort offset +§,
     version = 2.5,
     endpoints = #( [[/api]] [[/home]] [[/admin]] ),
-    settings = {
-        debug = true,
-        timeout = 30
-    }
+    enabled = true,
+    timeout = 30
 }
 """
 
@@ -191,6 +232,9 @@ server {
 def test():
     """Проверка работы программы"""
     print("=== ТЕСТ ПРОГРАММЫ ===")
+    print()
+    print("Тестовый конфиг:")
+    print(EXAMPLE_CONFIG)
     print()
     
     # Тестируем на примере
@@ -219,8 +263,5 @@ if __name__ == "__main__":
         print("="*50)
         print("Чтобы использовать с файлом:")
         print("  python config_to_xml.py ваш_файл.conf")
-        print()
-        print("Создайте example.conf с таким содержимым:")
-        print(EXAMPLE_CONFIG)
     else:
         main()
