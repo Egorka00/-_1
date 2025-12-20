@@ -1,0 +1,35 @@
+// Грамматика учебного конфигурационного языка (Вариант 6)
+
+start: (constant_decl | dictionary)*
+
+// Константы
+constant_decl: "var" CNAME VALUE ";"
+
+// Словарь
+dictionary: CNAME "{" pair ("," pair)* "}"
+pair: CNAME "=" value
+
+// Значения
+value: NUMBER -> number
+      | STRING -> string
+      | array
+      | dictionary
+      | constant_expr
+
+// Массив
+array: "#(" value+ ")"
+
+// Константное выражение (постфиксное)
+constant_expr: "§" expr "§"
+expr: item (item? OPERATOR)?
+item: CNAME | NUMBER
+
+// Токены (базовые элементы)
+CNAME: /[a-zA-Z][a-zA-Z0-9]*/      // Имена
+NUMBER: /[0-9]+(\.[0-9]*)?/        // Числа 123 или 123.45
+STRING: /\[\[[^\]]*\]\]/           // Строки [[текст]]
+OPERATOR: "+" | "-"                // Операторы
+
+// Игнорируем пробелы и комментарии
+%import common.WS
+%ignore WS
